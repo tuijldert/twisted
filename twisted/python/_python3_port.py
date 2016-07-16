@@ -1,4 +1,4 @@
-# -*- test-case-name: twisted.python.test.test_dist3 -*-
+# -*- test-case-name: twisted.python.test.test_python3_port -*-
 # Copyright (c) Twisted Matrix Laboratories.
 # See LICENSE for details.
 
@@ -212,7 +212,7 @@ modules = [
     "twisted.python.context",
     "twisted.python.deprecate",
     "twisted.python.dist",
-    "twisted.python.dist3",
+    "twisted.python._python3_port",
     "twisted.python.failure",
     "twisted.python.fakepwd",
     "twisted.python.filepath",
@@ -398,7 +398,7 @@ testModules = [
     "twisted.python.test.test_constants",
     "twisted.python.test.test_deprecate",
     "twisted.python.test.test_dist",
-    "twisted.python.test.test_dist3",
+    "twisted.python.test.test_python3_port",
     "twisted.python.test.test_runtime",
     "twisted.python.test.test_sendmsg",
     "twisted.python.test.test_shellcomp",

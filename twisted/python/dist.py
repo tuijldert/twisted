@@ -8,7 +8,7 @@ Distutils convenience functionality.
 Don't use this outside of Twisted.
 
 Since Twisted is not yet fully ported to Python3, it uses
-L{twisted.python.dist3} to know what to install on Python3.
+L{twisted.python._python3_port} to know what to install on Python3.
 
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
@@ -38,7 +38,7 @@ from setuptools.command.build_py import build_py
 
 from twisted import copyright
 from twisted.python.compat import execfile, _PY3
-from twisted.python.dist3 import modulesToInstall, testDataFiles
+from twisted.python._python3_port import modulesToInstall, testDataFiles
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
