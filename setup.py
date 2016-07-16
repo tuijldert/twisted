@@ -23,6 +23,6 @@ if __name__ == "__main__":
         if os.path.exists('twisted'):
             sys.path.insert(0, '.')
 
-        setup(**sys.argv[1:])
+        setup()
     except KeyboardInterrupt:
         sys.exit(1)

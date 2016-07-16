@@ -230,29 +230,6 @@ class OptionalDependenciesTests(TestCase):
 
 
 
-class GetVersionTests(TestCase):
-    """
-    Tests for L{dist.getVersion}.
-    """
-
-    def setUp(self):
-        self.dirname = self.mktemp()
-        os.mkdir(self.dirname)
-
-    def test_getVersionCore(self):
-        """
-        Test that getting the version of core reads from the
-        [base]/_version.py file.
-        """
-        with open(os.path.join(self.dirname, "_version.py"), "w") as f:
-            f.write("""
-from twisted.python import versions
-version = versions.Version("twisted", 0, 1, 2)
-""")
-        self.assertEqual(dist.getVersion(base=self.dirname), "0.1.2")
-
-
-
 class DummyCommand:
     """
     A fake Command.

@@ -33,8 +33,7 @@ import sys
 
 from distutils.command import build_scripts, build_ext
 from distutils.errors import CompileError
-from setuptools import setup as _setup
-from setuptools import Extension
+import setuptools
 from setuptools.command.build_py import build_py
 
 from twisted import copyright
@@ -118,7 +117,7 @@ _EXTRAS_REQUIRE = {
 }
 
 
-class ConditionalExtension(Extension):
+class ConditionalExtension(setuptools.Extension):
     """
     An extension module that will only be compiled if certain conditions are
     met.
@@ -130,22 +129,23 @@ class ConditionalExtension(Extension):
     """
     def __init__(self, *args, **kwargs):
         self.condition = kwargs.pop("condition", lambda builder: True)
-        Extension.__init__(self, *args, **kwargs)
+        setuptools.Extension.__init__(self, *args, **kwargs)
 
 
 
-def setup(**kw):
+def setup():
     """
     An alternative to distutils' setup() which is specially designed
     for Twisted subprojects.
-
-    @param conditionalExtensions: Extensions to optionally build.
-    @type conditionalExtensions: C{list} of L{ConditionalExtension}
     """
-    return _setup(**get_setup_args(**kw))
+    return setuptools.setup(**get_setup_args())
 
 
-def get_setup_args(**kw):
+def get_setup_args():
+    """
+    @return: The keyword arguments to be used the the setup method.
+    @rtype: L{dict}
+    """
 
     arguments = STATIC_PACKAGE_METADATA.copy()
 
@@ -196,20 +196,6 @@ def get_setup_args(**kw):
          ))
 
     return arguments
-
-
-def getVersion(base):
-    """
-    Extract the version number.
-
-    @rtype: str
-    @returns: The version number of the project, as a string like
-    "2.0.0".
-    """
-    vfile = os.path.join(base, '_version.py')
-    ns = {'__name__': 'Nothing to see here'}
-    execfile(vfile, ns)
-    return ns['version'].base()
 
 
 
