@@ -117,6 +117,23 @@ _EXTRAS_REQUIRE = {
     ),
 }
 
+# Scripts provided by Twisted.
+_CONSOLE_SCRIPTS = [
+    "cftp = twisted.conch.scripts.cftp:run",
+    "ckeygen = twisted.conch.scripts.ckeygen:run",
+    "conch = twisted.conch.scripts.conch:run",
+    "mailmail = twisted.mail.scripts.mailmail:run",
+    "pyhtmlizer = twisted.scripts.htmlizer:run",
+    "tkconch = twisted.conch.scripts.tkconch:run",
+    ]
+_CONSOLE_SCRIPTS_PY3 = [
+    "trial = twisted.scripts.trial:run",
+    "twistd = twisted.scripts.twistd:run",
+    ]
+if _PY3:
+    _CONSOLE_SCRIPTS = _CONSOLE_SCRIPTS_PY3
+
+
 
 class ConditionalExtension(Extension):
     """
@@ -131,6 +148,34 @@ class ConditionalExtension(Extension):
     def __init__(self, *args, **kwargs):
         self.condition = kwargs.pop("condition", lambda builder: True)
         Extension.__init__(self, *args, **kwargs)
+
+
+
+# The C extensions used for Twisted.
+_EXTENSIONS = [
+    ConditionalExtension(
+        "twisted.test.raiser",
+        ["twisted/test/raiser.c"],
+        condition=lambda _: _isCPython),
+
+    ConditionalExtension(
+        "twisted.internet.iocpreactor.iocpsupport",
+        ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
+         "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
+        libraries=["ws2_32"],
+        condition=lambda _: _isCPython and sys.platform == "win32"),
+
+    ConditionalExtension(
+        "twisted.python._sendmsg",
+        sources=["twisted/python/_sendmsg.c"],
+        condition=lambda _: not _PY3 and sys.platform != "win32"),
+
+    ConditionalExtension(
+        "twisted.runner.portmap",
+        ["twisted/runner/portmap.c"],
+        condition=lambda builder: not _PY3 and
+                                  builder._check_header("rpc/rpc.h")),
+    ]
 
 
 
@@ -150,7 +195,7 @@ def get_setup_args():
     """
     arguments = STATIC_PACKAGE_METADATA.copy()
 
-    extensions = getExtensions()
+    extensions = _EXTENSIONS
     # This is a workaround for distutils behavior; ext_modules isn't
     # actually used by our custom builder.  distutils deep-down checks
     # to see if there are any ext_modules defined before invoking
@@ -177,7 +222,7 @@ def get_setup_args():
         packages=find_packages(),
         install_requires=requirements,
         entry_points={
-            'console_scripts':  getConsoleScripts()
+            'console_scripts':  _CONSOLE_SCRIPTS
         },
         cmdclass=command_classes,
         include_package_data=True,
@@ -186,59 +231,6 @@ def get_setup_args():
     ))
 
     return arguments
-
-
-
-def getExtensions():
-    """
-    Get the C extensions used for Twisted.
-    """
-    extensions = [
-        ConditionalExtension(
-            "twisted.test.raiser",
-            ["twisted/test/raiser.c"],
-            condition=lambda _: _isCPython),
-
-        ConditionalExtension(
-            "twisted.internet.iocpreactor.iocpsupport",
-            ["twisted/internet/iocpreactor/iocpsupport/iocpsupport.c",
-             "twisted/internet/iocpreactor/iocpsupport/winsock_pointers.c"],
-            libraries=["ws2_32"],
-            condition=lambda _: _isCPython and sys.platform == "win32"),
-
-        ConditionalExtension(
-            "twisted.python._sendmsg",
-            sources=["twisted/python/_sendmsg.c"],
-            condition=lambda _: not _PY3 and sys.platform != "win32"),
-
-        ConditionalExtension(
-            "twisted.runner.portmap",
-            ["twisted/runner/portmap.c"],
-            condition=lambda builder: not _PY3 and
-                                      builder._check_header("rpc/rpc.h")),
-    ]
-
-    return extensions
-
-
-
-def getConsoleScripts():
-    """
-    Returns a list of scripts for Twisted.
-    """
-    scripts = [ "cftp = twisted.conch.scripts.cftp:run",
-                "ckeygen = twisted.conch.scripts.ckeygen:run",
-                "conch = twisted.conch.scripts.conch:run",
-                "mailmail = twisted.mail.scripts.mailmail:run",
-                "pyhtmlizer = twisted.scripts.htmlizer:run",
-                "tkconch = twisted.conch.scripts.tkconch:run"
-              ]
-    portedToPython3Scripts = [ "trial = twisted.scripts.trial:run",
-                               "twistd = twisted.scripts.twistd:run" ]
-    if _PY3:
-        return portedToPython3Scripts
-    else:
-        return scripts + portedToPython3Scripts
 
 
 

@@ -27,17 +27,17 @@ class SetupTests(TestCase):
     """
     Tests for L{get_setup_args}.
     """
+
     def test_conditionalExtensions(self):
         """
-        Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
-        objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be built.
+        Will return the arguments with a custom build_ext which knows how to
+        check whether they should be built.
         """
         good_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: True)
         bad_ext = ConditionalExtension("whatever", ["whatever.c"],
                                         condition=lambda b: False)
-        self.patch(dist, 'getExtensions', lambda: [good_ext, bad_ext])
+        self.patch(dist, '_EXTENSIONS', [good_ext, bad_ext])
         args = get_setup_args()
         # ext_modules should be set even though it's not used.  See comment
         # in get_setup_args
@@ -51,11 +51,12 @@ class SetupTests(TestCase):
 
     def test_win32Definition(self):
         """
-        When building on Windows NT, the WIN32 macro will be defined as 1.
+        When building on Windows NT, the WIN32 macro will be defined as 1 on
+        the extensions.
         """
         ext = ConditionalExtension("whatever", ["whatever.c"],
                                    define_macros=[("whatever", 2)])
-        self.patch(dist, 'getExtensions', lambda: [ext])
+        self.patch(dist, '_EXTENSIONS', [ext])
         args = get_setup_args()
         builder = args["cmdclass"]["build_ext"](Distribution())
         self.patch(os, "name", "nt")
