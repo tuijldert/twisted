@@ -23,7 +23,8 @@ class ModulesToInstallTests(TestCase):
         L{modulesToInstall} includes some obvious module names.
         """
         self.assertIn("twisted.internet.reactor", modulesToInstall)
-        self.assertIn("twisted.python.test.test_dist3", modulesToInstall)
+        self.assertIn(
+            "twisted.python.test.test_python3_port", modulesToInstall)
 
 
     def test_exist(self):
