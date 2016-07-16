@@ -373,22 +373,3 @@ class PickyBuildPy(build_py):
             if ".".join([module[0], module[1]]) in modulesToInstall or
                ".".join([module[0], module[1]]) in testDataFiles]
         return modules
-
-
-def _checkCPython(sys=sys, platform=platform):
-    """
-    Checks if this implementation is CPython.
-
-    This uses C{platform.python_implementation}.
-
-    This takes C{sys} and C{platform} kwargs that by default use the real
-    modules. You shouldn't care about these -- they are for testing purposes
-    only.
-
-    @return: C{False} if the implementation is definitely not CPython, C{True}
-        otherwise.
-    """
-    return platform.python_implementation() == "CPython"
-
-
-_isCPython = _checkCPython()
