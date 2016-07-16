@@ -7,7 +7,8 @@ Distutils convenience functionality.
 
 Don't use this outside of Twisted.
 
-Maintainer: Christopher Armstrong
+Since Twisted is not yet fully ported to Python3, it uses
+L{twisted.python.dist3} to know what to install on Python3.
 
 @var _EXTRA_OPTIONS: These are the actual package names and versions that will
     be used by C{extras_require}.  This is not passed to setup directly so that
@@ -34,9 +35,11 @@ from distutils.command import build_scripts, build_ext
 from distutils.errors import CompileError
 from setuptools import setup as _setup
 from setuptools import Extension
+from setuptools.command.build_py import build_py
 
 from twisted import copyright
 from twisted.python.compat import execfile, _PY3
+from twisted.python.dist3 import modulesToInstall, testDataFiles
 
 STATIC_PACKAGE_METADATA = dict(
     name="Twisted",
@@ -143,14 +146,17 @@ def setup(**kw):
 
 
 def get_setup_args(**kw):
-    if 'cmdclass' not in kw:
-        kw['cmdclass'] = {'build_scripts': build_scripts_twisted}
 
-    if "conditionalExtensions" in kw:
-        extensions = kw["conditionalExtensions"]
-        del kw["conditionalExtensions"]
+    arguments = STATIC_PACKAGE_METADATA.copy()
 
-        if 'ext_modules' not in kw:
+    if 'cmdclass' not in arguments:
+        arguments['cmdclass'] = {'build_scripts': build_scripts_twisted}
+
+    if "conditionalExtensions" in arguments:
+        extensions = arguments["conditionalExtensions"]
+        del arguments["conditionalExtensions"]
+
+        if 'ext_modules' not in arguments:
             # This is a workaround for distutils behavior; ext_modules isn't
             # actually used by our custom builder.  distutils deep-down checks
             # to see if there are any ext_modules defined before invoking
@@ -159,12 +165,37 @@ def get_setup_args(**kw):
             # if it should build any extensions.  The reason we have to delay
             # the conditional checks until then is that the compiler objects
             # are not yet set up when this code is executed.
-            kw["ext_modules"] = extensions
+            arguments["ext_modules"] = extensions
 
         class my_build_ext(build_ext_twisted):
             conditionalExtensions = extensions
-        kw.setdefault('cmdclass', {})['build_ext'] = my_build_ext
-    return kw
+        arguments.setdefault('cmdclass', {})['build_ext'] = my_build_ext
+
+    if sys.version_info[0] >= 3:
+        requirements = ["zope.interface >= 4.0.2"]
+    else:
+        requirements = ["zope.interface >= 3.6.0"]
+
+    arguments.update(dict(
+        packages=setuptools.find_packages(),
+        install_requires=requirements,
+        conditionalExtensions=getExtensions(),
+        entry_points={
+            'console_scripts':  getConsoleScripts()
+        },
+        include_package_data=True,
+        zip_safe=False,
+        extras_require=_EXTRAS_REQUIRE,
+    ))
+
+    if sys.version_info[0] >= 3:
+        arguments.update(dict(
+            cmdclass={
+                'build_py': PickyBuildPy,
+            }
+         ))
+
+    return arguments
 
 
 def getVersion(base):
@@ -329,6 +360,19 @@ class build_ext_twisted(build_ext.build_ext):
         self.compiler.announce("checking for %s ..." % header_name, 0)
         return self._compile_helper("#include <%s>\n" % header_name)
 
+
+class PickyBuildPy(build_py):
+    """
+    A version of build_py that doesn't install the modules that aren't yet
+    ported to Python 3.
+    """
+    def find_package_modules(self, package, package_dir):
+        modules = [
+            module for module
+            in super(build_py, self).find_package_modules(package, package_dir)
+            if ".".join([module[0], module[1]]) in modulesToInstall or
+               ".".join([module[0], module[1]]) in testDataFiles]
+        return modules
 
 
 def _checkCPython(sys=sys, platform=platform):

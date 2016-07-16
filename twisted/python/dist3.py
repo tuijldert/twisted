@@ -7,6 +7,9 @@ Support for installing Twisted on Python 3.
 
 Only necessary while parts of Twisted are unported.
 
+This is a helper for L{twisted.python.dist} to know what to install on
+Python3.
+
 @var modules: A list of modules that have been ported,
     e.g. "twisted.python.versions"; a package name (e.g. "twisted.python")
     indicates the corresponding __init__.py file has been ported
