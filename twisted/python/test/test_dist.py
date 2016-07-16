@@ -5,20 +5,16 @@
 Tests for parts of our release automation system.
 """
 
-
-import os
-import sys
-
-
 from setuptools.dist import Distribution
 
 from twisted.trial.unittest import TestCase
 
-from twisted.python import dist
 from twisted.python.compat import _PY3
-from twisted.python.dist import (get_setup_args, ConditionalExtension,
-                                 build_scripts_twisted, _EXTRAS_REQUIRE)
-from twisted.python.filepath import FilePath
+from twisted.python.dist import (
+    get_setup_args,
+    ConditionalExtension,
+    _EXTRAS_REQUIRE,
+    )
 
 
 
@@ -26,39 +22,6 @@ class SetupTests(TestCase):
     """
     Tests for L{get_setup_args}.
     """
-    def test_conditionalExtensions(self):
-        """
-        Passing C{conditionalExtensions} as a list of L{ConditionalExtension}
-        objects to get_setup_args inserts a custom build_ext into the result
-        which knows how to check whether they should be built.
-        """
-        good_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: True)
-        bad_ext = ConditionalExtension("whatever", ["whatever.c"],
-                                        condition=lambda b: False)
-        args = get_setup_args(conditionalExtensions=[good_ext, bad_ext])
-        # ext_modules should be set even though it's not used.  See comment
-        # in get_setup_args
-        self.assertEqual(args["ext_modules"], [good_ext, bad_ext])
-        cmdclass = args["cmdclass"]
-        build_ext = cmdclass["build_ext"]
-        builder = build_ext(Distribution())
-        builder.prepare_extensions()
-        self.assertEqual(builder.extensions, [good_ext])
-
-
-    def test_win32Definition(self):
-        """
-        When building on Windows NT, the WIN32 macro will be defined as 1.
-        """
-        ext = ConditionalExtension("whatever", ["whatever.c"],
-                                   define_macros=[("whatever", 2)])
-        args = get_setup_args(conditionalExtensions=[ext])
-        builder = args["cmdclass"]["build_ext"](Distribution())
-        self.patch(os, "name", "nt")
-        builder.prepare_extensions()
-        self.assertEqual(ext.define_macros, [("whatever", 2), ("WIN32", 1)])
-
 
 
 class OptionalDependenciesTests(TestCase):
@@ -227,107 +190,3 @@ class OptionalDependenciesTests(TestCase):
         self.assertIn('h2 >= 2.3.0, < 3.0', deps)
         self.assertIn('priority >= 1.1.0, < 2.0', deps)
         self.assertIn('pypiwin32', deps)
-
-
-
-class DummyCommand:
-    """
-    A fake Command.
-    """
-    def __init__(self, **kwargs):
-        for kw, val in kwargs.items():
-            setattr(self, kw, val)
-
-    def ensure_finalized(self):
-        pass
-
-
-
-class BuildScriptsTests(TestCase):
-    """
-    Tests for L{dist.build_scripts_twisted}.
-    """
-
-    def setUp(self):
-        self.source = FilePath(self.mktemp())
-        self.target = FilePath(self.mktemp())
-        self.source.makedirs()
-        self.addCleanup(os.chdir, os.getcwd())
-        os.chdir(self.source.path)
-
-
-    def buildScripts(self):
-        """
-        Write 3 types of scripts and run the L{build_scripts_twisted}
-        command.
-        """
-        self.writeScript(self.source, "script1",
-                          ("#! /usr/bin/env python2.7\n"
-                           "# bogus script w/ Python sh-bang\n"
-                           "pass\n"))
-
-        self.writeScript(self.source, "script2.py",
-                        ("#!/usr/bin/python\n"
-                         "# bogus script w/ Python sh-bang\n"
-                         "pass\n"))
-
-        self.writeScript(self.source, "shell.sh",
-                        ("#!/bin/sh\n"
-                         "# bogus shell script w/ sh-bang\n"
-                         "exit 0\n"))
-
-        expected = ['script1', 'script2.py', 'shell.sh']
-        cmd = self.getBuildScriptsCmd(self.target,
-                                     [self.source.child(fn).path
-                                      for fn in expected])
-        cmd.finalize_options()
-        cmd.run()
-
-        return self.target.listdir()
-
-
-    def getBuildScriptsCmd(self, target, scripts):
-        """
-        Create a distutils L{Distribution} with a L{DummyCommand} and wrap it
-        in L{build_scripts_twisted}.
-
-        @type target: L{FilePath}
-        """
-        dist = Distribution()
-        dist.scripts = scripts
-        dist.command_obj["build"] = DummyCommand(
-            build_scripts = target.path,
-            force = 1,
-            executable = sys.executable
-        )
-        return build_scripts_twisted(dist)
-
-
-    def writeScript(self, dir, name, text):
-        """
-        Write the script to disk.
-        """
-        with open(dir.child(name).path, "w") as f:
-            f.write(text)
-
-
-    def test_notWindows(self):
-        """
-        L{build_scripts_twisted} does not rename scripts on non-Windows
-        platforms.
-        """
-        self.patch(os, "name", "twisted")
-        built = self.buildScripts()
-        for name in ['script1', 'script2.py', 'shell.sh']:
-            self.assertIn(name, built)
-
-
-    def test_windows(self):
-        """
-        L{build_scripts_twisted} renames scripts so they end with '.py' on
-        the Windows platform.
-        """
-        self.patch(os, "name", "nt")
-        built = self.buildScripts()
-        for name in ['script1.py', 'script2.py', 'shell.sh.py']:
-            self.assertIn(name, built)
