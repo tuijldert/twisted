@@ -12,7 +12,7 @@ import gc, traceback
 import re
 
 from twisted.python import failure, log
-from twisted.python.compat import _PY3
+from twisted.python.compat import _PY3, _PY34PLUS
 from twisted.internet import defer, reactor
 from twisted.internet.task import Clock
 from twisted.trial import unittest
@@ -2446,3 +2446,55 @@ class DeferredFilesystemLockTests(unittest.TestCase):
         self.assertFalse(timeoutCall.active())
         self.assertIsNone(self.lock._timeoutCall)
         self.failureResultOf(deferred, defer.CancelledError)
+
+
+
+class DeferredFutureAdapterTests(unittest.TestCase):
+
+    if not _PY34PLUS:
+        skip = "Cannot run on Pythons before 3.4."
+
+    def test_deferredToFuture(self):
+        """
+        L{defer.deferredToFuture} makes a L{asyncio.Future} fire when the given
+        L{defer.Deferred} does.
+        """
+        from asyncio import new_event_loop
+
+        results = []
+        errors = []
+
+        d = defer.Deferred()
+        d.addCallback(results.append)
+        d.addErrback(errors.append)
+
+        loop = new_event_loop()
+        loop.call_soon_threadsafe(d.callback, 1)
+        loop.run_until_complete(defer.deferredToFuture(loop, d))
+
+        self.assertEqual(results, [1])
+        self.assertEqual(errors, [])
+
+
+    def test_deferredToFutureFailure(self):
+        """
+        L{defer.deferredToFuture} makes a L{asyncio.Future} fire with an
+        exception when the given L{defer.Deferred} does.
+        """
+        from asyncio import new_event_loop
+
+        results = []
+        errors = []
+
+        d = defer.Deferred()
+        d.addCallback(results.append)
+        d.addErrback(errors.append)
+
+        theFailure = failure.Failure(ValueError(""))
+
+        loop = new_event_loop()
+        loop.call_soon_threadsafe(d.errback, theFailure)
+        loop.run_until_complete(defer.deferredToFuture(loop, d))
+
+        self.assertEqual(results, [])
+        self.assertEqual(errors, [theFailure])
