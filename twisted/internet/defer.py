@@ -1690,6 +1690,8 @@ class DeferredFilesystemLock(lockfile.FilesystemLock):
 
         return d
 
+
+
 if _PY3:
 
     def futureToDeferred(future):
@@ -1714,6 +1716,7 @@ if _PY3:
 
         asyncio.ensure_future(future).add_done_callback(_adapt)
         return d
+
 
 
     def deferredToFuture(loop, deferred):
